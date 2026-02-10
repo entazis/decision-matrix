@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decision Matrix | Make Trade-offs Explicit</title>
+  <meta name="description" content="A simple tool to help you make better decisions by weighing options against criteria. Perfect for architecture decisions, tech stack choices, and more.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>">
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #334155;
+      --border: #475569;
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --radius: 8px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .subtitle {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin-bottom: 1.5rem;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.25rem;
+      border: none;
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: var(--surface-hover);
+    }
+
+    .btn-danger {
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid var(--danger);
+    }
+
+    .btn-danger:hover {
+      background: var(--danger);
+      color: white;
+    }
+
+    .btn-icon {
+      padding: 0.5rem;
+      width: 32px;
+      height: 32px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .matrix-wrapper {
+      overflow-x: auto;
+      margin-bottom: 2rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: var(--surface);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 0.75rem;
+      text-align: center;
+      border: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--surface-hover);
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .header-input {
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-weight: 600;
+      text-align: center;
+      width: 100%;
+      font-size: 0.875rem;
+    }
+
+    .header-input:focus {
+      outline: 2px solid var(--accent);
+      border-radius: 4px;
+    }
+
+    .weight-input {
+      width: 60px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 0.875rem;
+    }
+
+    .weight-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .score-input {
+      width: 50px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem;
+      border-radius: 4px;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    .score-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .option-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+
+    .criteria-cell {
+      text-align: left;
+      min-width: 150px;
+    }
+
+    .criteria-name {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .total-row {
+      background: var(--surface-hover);
+      font-weight: 700;
+    }
+
+    .total-score {
+      font-size: 1.125rem;
+      padding: 0.5rem;
+    }
+
+    .winner {
+      background: rgba(34, 197, 94, 0.2);
+      color: var(--success);
+    }
+
+    .delete-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.25rem;
+      border-radius: 4px;
+      opacity: 0;
+      transition: all 0.15s ease;
+    }
+
+    th:hover .delete-btn,
+    td:hover .delete-btn {
+      opacity: 1;
+    }
+
+    .delete-btn:hover {
+      color: var(--danger);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      background: var(--surface);
+      border-radius: var(--radius);
+      border: 2px dashed var(--border);
+    }
+
+    .empty-state h2 {
+      font-size: 1.25rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .tip {
+      background: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid var(--accent);
+      padding: 1rem;
+      margin-bottom: 1.5rem;
+      border-radius: 0 var(--radius) var(--radius) 0;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+    }
+
+    .tip strong {
+      color: var(--text);
+    }
+
+    footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 640px) {
+      h1 {
+        font-size: 1.5rem;
+      }
+      
+      .controls {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      th, td {
+        padding: 0.5rem;
+        font-size: 0.75rem;
+      }
+
+      .weight-input, .score-input {
+        width: 40px;
+        padding: 0.25rem;
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>⚖️ Decision Matrix</h1>
+      <p class="subtitle">Make trade-offs explicit. Choose with clarity.</p>
+    </header>
+
+    <div class="tip">
+      <strong>How it works:</strong> Add options to compare, define your criteria, assign weights (1-10) based on importance, then score each option (1-10) for each criterion. The weighted totals help you see which option best meets your needs.
+    </div>
+
+    <div class="controls">
+      <button class="btn btn-primary" onclick="addOption()">
+        <span>+</span> Add Option
+      </button>
+      <button class="btn btn-primary" onclick="addCriteria()">
+        <span>+</span> Add Criteria
+      </button>
+      <button class="btn btn-secondary" onclick="loadExample()">
+        📋 Load Example
+      </button>
+      <button class="btn btn-secondary" onclick="exportMatrix()">
+        💾 Export
+      </button>
+      <button class="btn btn-danger" onclick="clearAll()">
+        🗑️ Clear All
+      </button>
+    </div>
+
+    <div id="matrix-container">
+      <div class="empty-state" id="empty-state">
+        <h2>Start Your Decision Matrix</h2>
+        <p>Add options and criteria to begin comparing your choices.</p>
+        <div class="actions">
+          <button class="btn btn-primary" onclick="addOption()">+ Add First Option</button>
+          <button class="btn btn-secondary" onclick="loadExample()">📋 Load Example</button>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>Built with clarity in mind. Part of <a href="https://entazis.dev">entazis.dev</a></p>
+    </footer>
+  </div>
+
+  <script>
+    // State
+    let state = {
+      options: [],
+      criteria: [],
+      scores: {} // key: `${criteriaId}-${optionId}`, value: score
+    };
+
+    // Generate unique IDs
+    function generateId() {
+      return Math.random().toString(36).substr(2, 9);
+    }
+
+    // Save state to localStorage
+    function saveState() {
+      localStorage.setItem('decision-matrix', JSON.stringify(state));
+    }
+
+    // Load state from localStorage
+    function loadState() {
+      const saved = localStorage.getItem('decision-matrix');
+      if (saved) {
+        state = JSON.parse(saved);
+        render();
+      }
+    }
+
+    // Add new option
+    function addOption() {
+      state.options.push({
+        id: generateId(),
+        name: `Option ${state.options.length + 1}`
+      });
+      saveState();
+      render();
+      trackEvent('add_option');
+    }
+
+    // Add new criteria
+    function addCriteria() {
+      if (state.options.length === 0) {
+        addOption();
+      }
+      state.criteria.push({
+        id: generateId(),
+        name: `Criteria ${state.criteria.length + 1}`,
+        weight: 5
+      });
+      saveState();
+      render();
+      trackEvent('add_criteria');
+    }
+
+    // Remove option
+    function removeOption(id) {
+      state.options = state.options.filter(o => o.id !== id);
+      // Clean up scores
+      Object.keys(state.scores).forEach(key => {
+        if (key.includes(id)) {
+          delete state.scores[key];
+        }
+      });
+      saveState();
+      render();
+      trackEvent('remove_option');
+    }
+
+    // Remove criteria
+    function removeCriteria(id) {
+      state.criteria = state.criteria.filter(c => c.id !== id);
+      // Clean up scores
+      Object.keys(state.scores).forEach(key => {
+        if (key.startsWith(id)) {
+          delete state.scores[key];
+        }
+      });
+      saveState();
+      render();
+      trackEvent('remove_criteria');
+    }
+
+    // Update option name
+    function updateOptionName(id, name) {
+      const option = state.options.find(o => o.id === id);
+      if (option) {
+        option.name = name;
+        saveState();
+      }
+    }
+
+    // Update criteria name
+    function updateCriteriaName(id, name) {
+      const criteria = state.criteria.find(c => c.id === id);
+      if (criteria) {
+        criteria.name = name;
+        saveState();
+      }
+    }
+
+    // Update criteria weight
+    function updateWeight(id, weight) {
+      const criteria = state.criteria.find(c => c.id === id);
+      if (criteria) {
+        criteria.weight = Math.max(1, Math.min(10, parseInt(weight) || 1));
+        saveState();
+        render();
+      }
+    }
+
+    // Update score
+    function updateScore(criteriaId, optionId, score) {
+      const key = `${criteriaId}-${optionId}`;
+      state.scores[key] = Math.max(1, Math.min(10, parseInt(score) || 0));
+      saveState();
+      render();
+    }
+
+    // Calculate total for an option
+    function calculateTotal(optionId) {
+      let total = 0;
+      state.criteria.forEach(criteria => {
+        const score = state.scores[`${criteria.id}-${optionId}`] || 0;
+        total += score * criteria.weight;
+      });
+      return total;
+    }
+
+    // Get max possible score
+    function getMaxPossible() {
+      return state.criteria.reduce((sum, c) => sum + c.weight * 10, 0);
+    }
+
+    // Load example data
+    function loadExample() {
+      state = {
+        options: [
+          { id: 'opt1', name: 'PostgreSQL' },
+          { id: 'opt2', name: 'MongoDB' },
+          { id: 'opt3', name: 'Redis' }
+        ],
+        criteria: [
+          { id: 'crit1', name: 'Query Flexibility', weight: 8 },
+          { id: 'crit2', name: 'Performance', weight: 9 },
+          { id: 'crit3', name: 'Scalability', weight: 7 },
+          { id: 'crit4', name: 'Team Experience', weight: 6 },
+          { id: 'crit5', name: 'Maintenance Cost', weight: 5 }
+        ],
+        scores: {
+          'crit1-opt1': 9, 'crit1-opt2': 7, 'crit1-opt3': 4,
+          'crit2-opt1': 8, 'crit2-opt2': 8, 'crit2-opt3': 10,
+          'crit3-opt1': 7, 'crit3-opt2': 9, 'crit3-opt3': 8,
+          'crit4-opt1': 9, 'crit4-opt2': 6, 'crit4-opt3': 7,
+          'crit5-opt1': 8, 'crit5-opt2': 6, 'crit5-opt3': 7
+        }
+      };
+      saveState();
+      render();
+      trackEvent('load_example');
+    }
+
+    // Export as JSON
+    function exportMatrix() {
+      const data = {
+        ...state,
+        exportedAt: new Date().toISOString(),
+        totals: state.options.map(o => ({
+          option: o.name,
+          score: calculateTotal(o.id),
+          maxPossible: getMaxPossible()
+        }))
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'decision-matrix.json';
+      a.click();
+      URL.revokeObjectURL(url);
+      trackEvent('export');
+    }
+
+    // Clear all
+    function clearAll() {
+      if (confirm('Clear all data? This cannot be undone.')) {
+        state = { options: [], criteria: [], scores: {} };
+        saveState();
+        render();
+        trackEvent('clear_all');
+      }
+    }
+
+    // Track events
+    function trackEvent(action) {
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metrics: [{
+            name: 'web_events',
+            type: 'counter',
+            value: 1,
+            labels: { site: 'decision-matrix', action, category: 'interaction' }
+          }]
+        })
+      }).catch(() => {});
+    }
+
+    // Render the matrix
+    function render() {
+      const container = document.getElementById('matrix-container');
+      
+      if (state.options.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <h2>Start Your Decision Matrix</h2>
+            <p>Add options and criteria to begin comparing your choices.</p>
+            <div class="actions">
+              <button class="btn btn-primary" onclick="addOption()">+ Add First Option</button>
+              <button class="btn btn-secondary" onclick="loadExample()">📋 Load Example</button>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // Calculate totals
+      const totals = state.options.map(o => ({
+        id: o.id,
+        total: calculateTotal(o.id)
+      }));
+      const maxTotal = Math.max(...totals.map(t => t.total));
+
+      let html = `
+        <div class="matrix-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Criteria</th>
+                <th>Weight</th>
+                ${state.options.map(opt => `
+                  <th>
+                    <div class="option-header">
+                      <input type="text" class="header-input" value="${escapeHtml(opt.name)}" 
+                        onchange="updateOptionName('${opt.id}', this.value)"
+                        placeholder="Option name">
+                      <button class="delete-btn" onclick="removeOption('${opt.id}')" title="Remove">×</button>
+                    </div>
+                  </th>
+                `).join('')}
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      state.criteria.forEach(crit => {
+        html += `
+          <tr>
+            <td class="criteria-cell">
+              <div class="criteria-name">
+                <input type="text" class="header-input" value="${escapeHtml(crit.name)}"
+                  onchange="updateCriteriaName('${crit.id}', this.value)"
+                  placeholder="Criteria name"
+                  style="text-align: left;">
+                <button class="delete-btn" onclick="removeCriteria('${crit.id}')" title="Remove">×</button>
+              </div>
+            </td>
+            <td>
+              <input type="number" class="weight-input" value="${crit.weight}" min="1" max="10"
+                onchange="updateWeight('${crit.id}', this.value)">
+            </td>
+            ${state.options.map(opt => {
+              const score = state.scores[`${crit.id}-${opt.id}`] || '';
+              return `
+                <td>
+                  <input type="number" class="score-input" value="${score}" min="1" max="10"
+                    onchange="updateScore('${crit.id}', '${opt.id}', this.value)"
+                    placeholder="-">
+                </td>
+              `;
+            }).join('')}
+          </tr>
+        `;
+      });
+
+      // Totals row
+      html += `
+        <tr class="total-row">
+          <td colspan="2"><strong>Total Score</strong></td>
+          ${state.options.map(opt => {
+            const total = calculateTotal(opt.id);
+            const isWinner = total === maxTotal && maxTotal > 0;
+            return `<td class="total-score ${isWinner ? 'winner' : ''}">${total}</td>`;
+          }).join('')}
+        </tr>
+      `;
+
+      // Max possible row
+      const maxPossible = getMaxPossible();
+      if (maxPossible > 0) {
+        html += `
+          <tr>
+            <td colspan="2" style="color: var(--text-muted); font-size: 0.75rem;">Max possible</td>
+            ${state.options.map(() => `<td style="color: var(--text-muted); font-size: 0.75rem;">${maxPossible}</td>`).join('')}
+          </tr>
+        `;
+      }
+
+      html += `
+            </tbody>
+          </table>
+        </div>
+      `;
+
+      if (state.criteria.length === 0) {
+        html += `
+          <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            <p>Add criteria to start scoring your options.</p>
+            <button class="btn btn-primary" onclick="addCriteria()" style="margin-top: 1rem;">+ Add Criteria</button>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+    }
+
+    // Escape HTML
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      
+      // Track page visit
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          metrics: [{
+            name: 'web_page_visits',
+            type: 'counter',
+            value: 1,
+            labels: { site: 'decision-matrix', page: location.pathname || '/' }
+          }]
+        })
+      }).catch(() => {});
+    });
+  </script>
+</body>
+</html>
