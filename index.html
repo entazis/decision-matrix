@@ -571,11 +571,12 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          site: 'decision-matrix',
           metrics: [{
             name: 'web_events',
             type: 'counter',
             value: 1,
-            labels: { site: 'decision-matrix', action, category: 'interaction' }
+            labels: { action, category: 'interaction' }
           }]
         })
       }).catch(() => {});
@@ -715,11 +716,12 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          site: 'decision-matrix',
           metrics: [{
             name: 'web_page_visits',
             type: 'counter',
             value: 1,
-            labels: { site: 'decision-matrix', page: location.pathname || '/' }
+            labels: { page: location.pathname || '/' }
           }]
         })
       }).catch(() => {});
